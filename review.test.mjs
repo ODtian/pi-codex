@@ -10,7 +10,7 @@ test('prefetch overlaps sibling reviews and applies each complete decision', asy
   const model = { id: 'codex-auto-review', provider: 'openai-codex', api: 'openai-codex-responses' };
   const messages = [{ role: 'user', content: 'Read the requested files.' }, { role: 'assistant', content: actions }];
   const pi = { on: (name, fn) => { const list = handlers.get(name) ?? []; list.push(fn); handlers.set(name, list); }, getActiveTools: () => ['read'] };
-  const ctx = { cwd: process.cwd(), ui: { setStatus() {} }, sessionManager: {
+  const ctx = { cwd: process.cwd(), sessionManager: {
     getBranch: () => [], getHeader: () => ({}), getLeafId: () => 'batch', buildSessionProjection: () => ({ messages }),
   }, modelRegistry: { find: () => model, getAll: () => [model], streamSimple: (_model, context) => ({ result: async () => {
     requests++; active++; maximum = Math.max(maximum, active);

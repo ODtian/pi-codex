@@ -177,7 +177,6 @@ export function registerReview(pi: ExtensionAPI, get: () => State): void {
   pi.on("tool_call", async (event, ctx) => {
     const state = get(), options = config().review;
     if (!state.review || !(options.tools.includes("*") || options.tools.includes(event.toolName))) return;
-    const started = Date.now();
     const messages = ctx.sessionManager.buildSessionProjection().messages;
     const history = limitHistory(sessionTranscript(ctx.sessionManager));
     const key = ctx.sessionManager.getLeafId(); // Reassess after earlier tool results change the available evidence.
@@ -203,9 +202,6 @@ export function registerReview(pi: ExtensionAPI, get: () => State): void {
     const pending = event.parentToolCallId ? undefined : batch?.pending.get(event.toolCallId);
     batch?.pending.delete(event.toolCallId);
     const result = pending?.input === JSON.stringify([event.toolName, event.input]) ? await pending.result : await run(event);
-    const ms = Date.now() - started;
-    const outcome = result.decision?.outcome === "allow" ? "审查通过" : result.decision ? "审查拦截" : "审查失败";
-    ctx.ui.setStatus("pi-codex-review", `${outcome} · ${event.toolName} · ${ms} 毫秒`);
     if (result.error) return { block: true, reason: `Codex review: ${result.error}` };
     if (result.decision?.outcome === "deny") return { block: true, reason: result.decision.rationale || "Codex review: deny" };
   });

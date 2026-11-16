@@ -25,10 +25,6 @@ export function restore(ctx: ExtensionContext): State {
   const defaults = config().defaults;
   return { review: value?.review ?? defaults.review, compaction: value?.compaction ?? defaults.compaction };
 }
-/** Show the current request option and plugin settings in the existing status bar. */
-export function status(ctx: ExtensionContext, state: State): void {
-  ctx.ui.setStatus("pi-codex", `Codex · Fast ${isFast(ctx) ? "开启" : "关闭"} · 审查${state.review ? "开启" : "关闭"} · ${CONTEXT_LABELS[state.compaction]}`);
-}
 /** Bind GUI dialogs and slash commands to the same configuration operations. */
 export function registerSettings(pi: ExtensionAPI, get: () => State, set: (state: State, ctx: ExtensionContext) => void): void {
   /** Apply a choice from either the command arguments or the settings panel. */
@@ -36,7 +32,6 @@ export function registerSettings(pi: ExtensionAPI, get: () => State, set: (state
     if (key === "fast") {
       if (!isCodex(ctx)) throw new Error("请先选择 OpenAI Codex 模型");
       await setFast(pi, ctx, value === "on");
-      status(ctx, get());
     } else set({ ...get(), [key]: key === "review" ? value === "on" : value }, ctx);
   };
   pi.registerCommand("codex", {

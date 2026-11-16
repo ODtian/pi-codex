@@ -8,7 +8,7 @@ test('panel choices and completed commands update the same session settings', as
   let command, state = { review: true, compaction: 'remote' };
   const selections = [0, 1, 2, 3];
   const ctx = { model: { provider: 'openai-codex', id: 'gpt-6.1-sol' },
-    ui: { select: async (_title, options) => options[selections.shift()], setStatus() {} } };
+    ui: { select: async (_title, options) => options[selections.shift()] } };
   const pi = { registerCommand: (name, options) => { command = { name, ...options }; },
     getThinkingLevel: () => 'high', setThinkingLevel() {},
     setModel: async model => { ctx.model = model; return true; } };
