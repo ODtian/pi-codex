@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Container, SettingsList, Text } from "@earendil-works/pi-tui";
+import { getKeybindings, Text } from "@earendil-works/pi-tui";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { setFast, isFast, isCodex } from "./fast.ts";
 
@@ -53,31 +53,31 @@ export function registerSettings(pi: ExtensionAPI, get: () => State, set: (state
       }
       const initial = get(), draft = { ...initial, fast: isFast(ctx) }; // Commit the panel's choices together on Save.
       const saved = await ctx.ui.custom<boolean>((_tui, theme, _keys, done) => {
-        const list = new SettingsList([
-          { id: "fast", label: "Fast", currentValue: draft.fast ? "开启" : "关闭", values: ["关闭", "开启"], description: "为当前会话的模型请求选择优先服务层。" },
-          { id: "review", label: "自动审查", currentValue: draft.review ? "开启" : "关闭", values: ["关闭", "开启"], description: "工具执行前，由 Codex 审查操作。" },
-          { id: "compaction", label: "上下文策略", currentValue: CONTEXT_LABELS[draft.compaction], values: Object.values(CONTEXT_LABELS), description: "远程压缩生成加密摘要；实验性上下文管理通过笔记和历史切换窗口。" },
-          { id: "save", label: "保存", currentValue: "保存并关闭", values: ["保存并关闭"] },
-        ], 4, {
-          label: (text, selected) => selected ? theme.fg("accent", text) : text,
-          value: text => theme.fg("muted", text),
-          description: text => theme.fg("dim", text),
-          cursor: theme.fg("accent", "→ "),
-          hint: text => theme.fg("dim", text),
-        }, (id, next) => {
-          if (id === "save") done(true);
-          else if (id === "compaction") draft.compaction = next === CONTEXT_LABELS.remote ? "remote" : "experimental";
-          else draft[id as "fast" | "review"] = next === "开启";
-        }, () => done(false));
-        if (key) list.selectItem(key);
-        const panel = new Container(); // Use the host-provided theme in both the GUI adapter and Pi's terminal.
-        panel.addChild(new Text(theme.fg("accent", "Codex 设置"), 1, 1));
-        panel.addChild(list);
+        const fields = ["fast", "review", "compaction", "save"] as const;
+        const descriptions = ["为当前会话的模型请求选择优先服务层。", "工具执行前，由 Codex 审查操作。", "远程压缩生成加密摘要；实验性上下文管理通过笔记和历史切换窗口。", "保存当前会话的设置。"];
+        const bindings = getKeybindings(), text = new Text();
+        let selected = key ? fields.indexOf(key as typeof fields[number]) : 0;
         return {
-          render: width => panel.render(width),
-          invalidate: () => panel.invalidate(),
-          handleMouse: event => panel.handleMouse(event),
-          handleInput: data => { if (data === "\x03") done(false); else list.handleInput(data); }, // The GUI's Close action sends Ctrl+C.
+          render: width => {
+            // Equal ASCII prefixes align field labels across the GUI's Latin and CJK fonts.
+            const rows = [`[${draft.fast ? "x" : " "}] Fast`, `[${draft.review ? "x" : " "}] 自动审查`, `[>] 上下文策略：${CONTEXT_LABELS[draft.compaction]}`, "[ 保存并关闭 ]"];
+            const lines = rows.map((row, index) => index === selected ? theme.fg("accent", `> ${row}`) : `  ${row}`);
+            lines.splice(3, 0, ""); // Separate the Save action from the three settings.
+            text.setText([theme.fg("accent", "  Codex 设置"), "", ...lines, "", theme.fg("dim", `  ${descriptions[selected]}`), "", theme.fg("dim", "  ↑/↓ 选择 · Enter/空格 切换 · Esc 取消")].join("\n"));
+            return text.render(width);
+          },
+          invalidate: () => text.invalidate(),
+          handleInput: data => {
+            if (data === "\x03" || bindings.matches(data, "tui.select.cancel")) done(false); // The GUI's Close action sends Ctrl+C.
+            else if (bindings.matches(data, "tui.select.up")) selected = (selected + fields.length - 1) % fields.length;
+            else if (bindings.matches(data, "tui.select.down")) selected = (selected + 1) % fields.length;
+            else if (data === " " || bindings.matches(data, "tui.select.confirm")) {
+              const field = fields[selected];
+              if (field === "save") done(true);
+              else if (field === "compaction") draft.compaction = draft.compaction === "remote" ? "experimental" : "remote";
+              else draft[field] = !draft[field];
+            }
+          },
         };
       });
       if (!saved) return;

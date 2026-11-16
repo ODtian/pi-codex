@@ -11,7 +11,7 @@ test('custom settings and completed commands update the same session options', a
       let saved;
       const component = factory({}, { fg: (_color, text) => text }, {}, value => { saved = value; });
       component.render(80);
-      // Toggle the three settings with the SDK component, then select Save.
+      // Toggle each setting, then save.
       for (const key of [' ', '\x1b[B', ' ', '\x1b[B', ' ', '\x1b[B', '\r']) component.handleInput(key);
       return saved;
     } } };

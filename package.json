@@ -1,6 +1,6 @@
 {
   "name": "@odtian/pi-codex",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Codex review, remote compaction, experimental context windows and Fast request options",
   "type": "module",
   "license": "MIT AND Apache-2.0",
