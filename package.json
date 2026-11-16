@@ -1,6 +1,6 @@
 {
   "name": "@odtian/pi-codex",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "description": "Codex review, remote compaction, experimental context windows and Fast request options",
   "type": "module",
   "license": "MIT AND Apache-2.0",
@@ -16,6 +16,6 @@
     "typebox": "*"
   },
   "files": ["index.ts", "settings.ts", "fast.ts", "compact.ts", "context.ts", "review.ts", "config.json", "policy.md", "LICENSE", "LICENSES", "NOTICE"],
-  "scripts": { "test": "node --experimental-strip-types --test fast.test.mjs review.test.mjs context.test.mjs" },
+  "scripts": { "test": "node --experimental-strip-types --test fast.test.mjs settings.test.mjs review.test.mjs context.test.mjs" },
   "engines": { "node": ">=22.19.0" }
 }

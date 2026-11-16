@@ -1,8 +1,8 @@
-# pi-codex 0.2.2
+# pi-codex 0.2.3
 
 在 pi-agent 的插件页面添加本目录 `F:/pi-codex`，启用后新建会话或使用 GUI 的 Reload 操作。
 
-[GitHub Releases](https://github.com/ODtian/pi-codex/releases) 提供 npm 格式的 `odtian-pi-codex-0.2.2.tgz`。包名为 `@odtian/pi-codex`。
+[GitHub Releases](https://github.com/ODtian/pi-codex/releases) 提供 npm 格式的 `odtian-pi-codex-0.2.3.tgz`。包名为 `@odtian/pi-codex`。
 
 Fast 使用请求参数 `service_tier: "priority"`，模型 ID 使用真实值。现有 GUI 的 `/codex` 对话框或 `/codex fast on|off` 修改当前会话模型的 `samplingParams.service_tier`。原生 profile 的 `model` 留空时继承父会话模型及其请求参数，指定模型时采用该模型配置。子会话可以用同一命令单独切换。profile 通过原生扩展配置加载本包：
 
@@ -11,7 +11,7 @@ load_extensions: true
 extensions: [pi-codex]
 ```
 
-GUI 的 `/codex` 选择框和以下命令使用同一入口：
+输入 `/codex` 打开设置面板，点击当前值切换，选“完成”关闭。GUI 提供命令名补全，Pi CLI 还提供参数补全。面板和以下命令共用设置入口：
 
 ```text
 /codex fast on

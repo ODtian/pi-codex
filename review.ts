@@ -204,7 +204,8 @@ export function registerReview(pi: ExtensionAPI, get: () => State): void {
     batch?.pending.delete(event.toolCallId);
     const result = pending?.input === JSON.stringify([event.toolName, event.input]) ? await pending.result : await run(event);
     const ms = Date.now() - started;
-    ctx.ui.setStatus("pi-codex-review", `Review · ${result.decision?.outcome ?? "error"} · ${event.toolName} · ${ms}ms`);
+    const outcome = result.decision?.outcome === "allow" ? "审查通过" : result.decision ? "审查拦截" : "审查失败";
+    ctx.ui.setStatus("pi-codex-review", `${outcome} · ${event.toolName} · ${ms} 毫秒`);
     if (result.error) return { block: true, reason: `Codex review: ${result.error}` };
     if (result.decision?.outcome === "deny") return { block: true, reason: result.decision.rationale || "Codex review: deny" };
   });

@@ -5,6 +5,8 @@ import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-a
 import { setFast, isFast, isCodex } from "./fast.ts";
 
 export const SETTINGS = "pi-codex:settings"; // Store only review and context mode on the session branch.
+const CONTEXT_LABELS = { remote: "远程压缩", experimental: "实验性上下文管理" };
+const VALUES: Record<string, string[]> = { fast: ["on", "off"], review: ["on", "off"], compaction: Object.keys(CONTEXT_LABELS) };
 export type State = { review: boolean; compaction: "remote" | "experimental" };
 export type Config = {
   defaults: State;
@@ -25,32 +27,47 @@ export function restore(ctx: ExtensionContext): State {
 }
 /** Show the current request option and plugin settings in the existing status bar. */
 export function status(ctx: ExtensionContext, state: State): void {
-  ctx.ui.setStatus("pi-codex", `Codex · Fast ${isFast(ctx) ? "on" : "off"} · Review ${state.review ? "on" : "off"} · Context ${state.compaction}`);
+  ctx.ui.setStatus("pi-codex", `Codex · Fast ${isFast(ctx) ? "开启" : "关闭"} · 审查${state.review ? "开启" : "关闭"} · ${CONTEXT_LABELS[state.compaction]}`);
 }
 /** Bind GUI dialogs and slash commands to the same configuration operations. */
 export function registerSettings(pi: ExtensionAPI, get: () => State, set: (state: State, ctx: ExtensionContext) => void): void {
+  /** Apply a choice from either the command arguments or the settings panel. */
+  const change = async (key: string, value: string, ctx: ExtensionContext) => {
+    if (key === "fast") {
+      if (!isCodex(ctx)) throw new Error("请先选择 OpenAI Codex 模型");
+      await setFast(pi, ctx, value === "on");
+      status(ctx, get());
+    } else set({ ...get(), [key]: key === "review" ? value === "on" : value }, ctx);
+  };
   pi.registerCommand("codex", {
-    description: "Codex: fast on|off, review on|off, compaction remote|experimental",
-    handler: async (args, ctx) => { // Existing commands and dialogs work in both CLI and GUI.
-      let [key, value] = args.trim().split(/\s+/);
+    description: "Codex 设置：Fast、自动审查、上下文策略",
+    getArgumentCompletions: prefix => { // Pi's native argument completion replaces the complete argument prefix.
+      const [key, value] = prefix.trimStart().split(/\s+/);
+      const items = value === undefined ? Object.keys(VALUES) : (VALUES[key] ?? []).map(option => `${key} ${option}`);
+      return items.filter(item => item.startsWith(prefix.trimStart())).map(item => ({ value: item, label: item }));
+    },
+    handler: async (args, ctx) => {
+      const [key, requestedValue] = args.trim().split(/\s+/);
       if (!key) {
-        const choice = await ctx.ui.select("Codex 设置", ["Fast", "Review", "Compaction"]);
-        if (!choice) return;
-        key = choice.toLowerCase();
+        for (;;) { // Reopen the same panel with the updated values after each selection.
+          const state = get(), fast = isFast(ctx);
+          const rows = [
+            { key: "fast", value: fast ? "off" : "on", label: `Fast：${fast ? "开启" : "关闭"}` },
+            { key: "review", value: state.review ? "off" : "on", label: `自动审查：${state.review ? "开启" : "关闭"}` },
+            { key: "compaction", value: state.compaction === "remote" ? "experimental" : "remote", label: `上下文策略：${CONTEXT_LABELS[state.compaction]}` },
+          ];
+          const selected = await ctx.ui.select("Codex 设置 · 点击切换", [...rows.map(row => row.label), "完成"]);
+          const row = rows.find(row => row.label === selected);
+          if (!row) return;
+          await change(row.key, row.value, ctx);
+        }
       }
-      const values = key === "compaction" ? ["remote", "experimental"] : ["on", "off"];
-      if (!["fast", "review", "compaction"].includes(key)) throw new Error("Usage: /codex fast on|off; review on|off; compaction remote|experimental");
-      value ||= await ctx.ui.select(key, values) as string;
+      const values = VALUES[key];
+      if (!values) throw new Error("用法：/codex fast on|off；review on|off；compaction remote|experimental");
+      const value = requestedValue || await ctx.ui.select(key, values);
       if (!value) return;
-      if (!values.includes(value)) throw new Error(`Choose ${values.join(" | ")}`);
-      if (key === "fast") {
-        if (!isCodex(ctx)) throw new Error("Select an OpenAI Codex model first");
-        await setFast(pi, ctx, value === "on");
-        status(ctx, get());
-      } else {
-        set({ ...get(), [key]: key === "review" ? value === "on" : value }, ctx);
-      }
-      ctx.ui.notify(`Codex：${key} = ${value}`, "info");
+      if (!values.includes(value)) throw new Error(`请选择 ${values.join(" | ")}`);
+      await change(key, value, ctx);
     },
   });
 }
