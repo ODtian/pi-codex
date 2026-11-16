@@ -4,7 +4,7 @@
 
 [GitHub Releases](https://github.com/ODtian/pi-codex/releases) 提供 npm 格式的 `odtian-pi-codex-0.2.1.tgz`。包名为 `@odtian/pi-codex`。
 
-Fast 使用请求参数 `service_tier: "priority"`。GUI 的 Fast 开关和 `/codex fast on|off` 修改当前会话的 `serviceTier`。模型 ID 使用真实值。原生 profile 的 `service_tier` 可选 `inherit`、`default`、`priority`，分别表示继承、普通、Fast。profile 通过原生扩展配置加载本包：
+Fast 使用请求参数 `service_tier: "priority"`。[GUI 的 Fast 开关](https://github.com/ODtian/pi-agent-desktop/tree/provider-service-tier)和 `/codex fast on|off` 修改当前会话的 `serviceTier`。模型 ID 使用真实值。原生 profile 的 `service_tier` 可选 `inherit`、`default`、`priority`，分别表示继承、普通、Fast。profile 通过原生扩展配置加载本包：
 
 ```yaml
 load_extensions: true
