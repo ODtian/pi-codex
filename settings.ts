@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { Container, SettingsList, Text } from "@earendil-works/pi-tui";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { setFast, isFast, isCodex } from "./fast.ts";
 
@@ -25,7 +26,7 @@ export function restore(ctx: ExtensionContext): State {
   const defaults = config().defaults;
   return { review: value?.review ?? defaults.review, compaction: value?.compaction ?? defaults.compaction };
 }
-/** Bind GUI dialogs and slash commands to the same configuration operations. */
+/** Bind the custom settings component and slash commands to the same session options. */
 export function registerSettings(pi: ExtensionAPI, get: () => State, set: (state: State, ctx: ExtensionContext) => void): void {
   /** Apply a choice from either the command arguments or the settings panel. */
   const change = async (key: string, value: string, ctx: ExtensionContext) => {
@@ -42,27 +43,46 @@ export function registerSettings(pi: ExtensionAPI, get: () => State, set: (state
       return items.filter(item => item.startsWith(prefix.trimStart())).map(item => ({ value: item, label: item }));
     },
     handler: async (args, ctx) => {
-      const [key, requestedValue] = args.trim().split(/\s+/);
-      if (!key) {
-        for (;;) { // Reopen the same panel with the updated values after each selection.
-          const state = get(), fast = isFast(ctx);
-          const rows = [
-            { key: "fast", value: fast ? "off" : "on", label: `Fast：${fast ? "开启" : "关闭"}` },
-            { key: "review", value: state.review ? "off" : "on", label: `自动审查：${state.review ? "开启" : "关闭"}` },
-            { key: "compaction", value: state.compaction === "remote" ? "experimental" : "remote", label: `上下文策略：${CONTEXT_LABELS[state.compaction]}` },
-          ];
-          const selected = await ctx.ui.select("Codex 设置 · 点击切换", [...rows.map(row => row.label), "完成"]);
-          const row = rows.find(row => row.label === selected);
-          if (!row) return;
-          await change(row.key, row.value, ctx);
-        }
-      }
+      const [key, value] = args.trim().split(/\s+/);
       const values = VALUES[key];
-      if (!values) throw new Error("用法：/codex fast on|off；review on|off；compaction remote|experimental");
-      const value = requestedValue || await ctx.ui.select(key, values);
-      if (!value) return;
-      if (!values.includes(value)) throw new Error(`请选择 ${values.join(" | ")}`);
-      await change(key, value, ctx);
+      if (key && !values) throw new Error("用法：/codex fast on|off；review on|off；compaction remote|experimental");
+      if (value) {
+        if (!values.includes(value)) throw new Error(`请选择 ${values.join(" | ")}`);
+        await change(key, value, ctx);
+        return;
+      }
+      const initial = get(), draft = { ...initial, fast: isFast(ctx) }; // Commit the panel's choices together on Save.
+      const saved = await ctx.ui.custom<boolean>((_tui, theme, _keys, done) => {
+        const list = new SettingsList([
+          { id: "fast", label: "Fast", currentValue: draft.fast ? "开启" : "关闭", values: ["关闭", "开启"], description: "为当前会话的模型请求选择优先服务层。" },
+          { id: "review", label: "自动审查", currentValue: draft.review ? "开启" : "关闭", values: ["关闭", "开启"], description: "工具执行前，由 Codex 审查操作。" },
+          { id: "compaction", label: "上下文策略", currentValue: CONTEXT_LABELS[draft.compaction], values: Object.values(CONTEXT_LABELS), description: "远程压缩生成加密摘要；实验性上下文管理通过笔记和历史切换窗口。" },
+          { id: "save", label: "保存", currentValue: "保存并关闭", values: ["保存并关闭"] },
+        ], 4, {
+          label: (text, selected) => selected ? theme.fg("accent", text) : text,
+          value: text => theme.fg("muted", text),
+          description: text => theme.fg("dim", text),
+          cursor: theme.fg("accent", "→ "),
+          hint: text => theme.fg("dim", text),
+        }, (id, next) => {
+          if (id === "save") done(true);
+          else if (id === "compaction") draft.compaction = next === CONTEXT_LABELS.remote ? "remote" : "experimental";
+          else draft[id as "fast" | "review"] = next === "开启";
+        }, () => done(false));
+        if (key) list.selectItem(key);
+        const panel = new Container(); // Use the host-provided theme in both the GUI adapter and Pi's terminal.
+        panel.addChild(new Text(theme.fg("accent", "Codex 设置"), 1, 1));
+        panel.addChild(list);
+        return {
+          render: width => panel.render(width),
+          invalidate: () => panel.invalidate(),
+          handleMouse: event => panel.handleMouse(event),
+          handleInput: data => { if (data === "\x03") done(false); else list.handleInput(data); }, // The GUI's Close action sends Ctrl+C.
+        };
+      });
+      if (!saved) return;
+      if (draft.fast !== isFast(ctx)) await change("fast", draft.fast ? "on" : "off", ctx);
+      if (draft.review !== initial.review || draft.compaction !== initial.compaction) set({ review: draft.review, compaction: draft.compaction }, ctx);
     },
   });
 }

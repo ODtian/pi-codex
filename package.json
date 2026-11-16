@@ -1,6 +1,6 @@
 {
   "name": "@odtian/pi-codex",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "Codex review, remote compaction, experimental context windows and Fast request options",
   "type": "module",
   "license": "MIT AND Apache-2.0",
@@ -13,6 +13,7 @@
   "peerDependencies": {
     "@earendil-works/pi-ai": ">=1.5.2",
     "@earendil-works/pi-coding-agent": ">=1.5.2",
+    "@earendil-works/pi-tui": ">=1.5.2",
     "typebox": "*"
   },
   "files": ["index.ts", "settings.ts", "fast.ts", "compact.ts", "context.ts", "review.ts", "config.json", "policy.md", "LICENSE", "LICENSES", "NOTICE"],

@@ -4,16 +4,22 @@ import { CombinedAutocompleteProvider } from '@earendil-works/pi-tui';
 import { registerSettings } from './settings.ts';
 
 // Exercise panel changes and the SDK's completion-to-command path through the same registration.
-test('panel choices and completed commands update the same session settings', async () => {
+test('custom settings and completed commands update the same session options', async () => {
   let command, state = { review: true, compaction: 'remote' };
-  const selections = [0, 1, 2, 3];
   const ctx = { model: { provider: 'openai-codex', id: 'gpt-6.1-sol' },
-    ui: { select: async (_title, options) => options[selections.shift()] } };
+    ui: { custom: async factory => {
+      let saved;
+      const component = factory({}, { fg: (_color, text) => text }, {}, value => { saved = value; });
+      component.render(80);
+      // Toggle the three settings with the SDK component, then select Save.
+      for (const key of [' ', '\x1b[B', ' ', '\x1b[B', ' ', '\x1b[B', '\r']) component.handleInput(key);
+      return saved;
+    } } };
   const pi = { registerCommand: (name, options) => { command = { name, ...options }; },
     getThinkingLevel: () => 'high', setThinkingLevel() {},
     setModel: async model => { ctx.model = model; return true; } };
   registerSettings(pi, () => state, next => { state = next; });
-  await command.handler('', ctx);
+  await command.handler('fast', ctx);
   assert.equal(ctx.model.samplingParams.service_tier, 'priority');
   assert.deepEqual(state, { review: false, compaction: 'experimental' });
 
