@@ -1,10 +1,10 @@
-# pi-codex 0.2.1
+# pi-codex 0.2.2
 
 在 pi-agent 的插件页面添加本目录 `F:/pi-codex`，启用后新建会话或使用 GUI 的 Reload 操作。
 
-[GitHub Releases](https://github.com/ODtian/pi-codex/releases) 提供 npm 格式的 `odtian-pi-codex-0.2.1.tgz`。包名为 `@odtian/pi-codex`。
+[GitHub Releases](https://github.com/ODtian/pi-codex/releases) 提供 npm 格式的 `odtian-pi-codex-0.2.2.tgz`。包名为 `@odtian/pi-codex`。
 
-Fast 使用请求参数 `service_tier: "priority"`。[GUI 的 Fast 开关](https://github.com/ODtian/pi-agent-desktop/tree/provider-service-tier)和 `/codex fast on|off` 修改当前会话的 `serviceTier`。模型 ID 使用真实值。原生 profile 的 `service_tier` 可选 `inherit`、`default`、`priority`，分别表示继承、普通、Fast。profile 通过原生扩展配置加载本包：
+Fast 使用请求参数 `service_tier: "priority"`，模型 ID 使用真实值。现有 GUI 的 `/codex` 对话框或 `/codex fast on|off` 修改当前会话模型的 `samplingParams.service_tier`。原生 profile 的 `model` 留空时继承父会话模型及其请求参数，指定模型时采用该模型配置。子会话可以用同一命令单独切换。profile 通过原生扩展配置加载本包：
 
 ```yaml
 load_extensions: true
@@ -21,7 +21,7 @@ GUI 的 `/codex` 选择框和以下命令使用同一入口：
 /codex compaction experimental
 ```
 
-Fast、审查开关和上下文策略保存在当前会话，`config.json` 控制插件初始值。原生 profile 的请求参数继承由客户端处理。
+Fast、审查开关和上下文策略保存在当前会话，`config.json` 控制插件初始值。模型配置中的 `samplingParams.service_tier` 提供 Fast 默认值。
 
 | 上下文策略 | 实现 | 恢复方式 |
 | --- | --- | --- |

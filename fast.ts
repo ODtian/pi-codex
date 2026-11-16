@@ -1,11 +1,9 @@
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
-export const PROVIDER_OPTIONS = "pi-web:provider-options"; // The GUI owns session settings and native profile inheritance.
-/** Read the current session's request option, with the configured model as its default. */
+const FAST = "pi-codex:fast"; // Persist the request option across session reloads.
+/** Read the selected model's request parameter, which native model inheritance already carries. */
 export function isFast(ctx: ExtensionContext): boolean {
-  const entry = ctx.sessionManager.getBranch().findLast(e => e.type === "custom" && e.customType === PROVIDER_OPTIONS);
-  const value = entry?.type === "custom" ? (entry.data as { serviceTier: string | null }).serviceTier : ctx.model?.samplingParams?.service_tier;
-  return value === "priority";
+  return ctx.model?.samplingParams?.service_tier === "priority";
 }
 /** Restrict the request option to the Codex provider. */
 export function isCodex(ctx: ExtensionContext): boolean { return ctx.model?.provider === "openai-codex"; }
@@ -16,7 +14,26 @@ export function priority(payload: unknown, fast: boolean): Record<string, any> {
   else delete body.service_tier;
   return body;
 }
-/** Adapt the native provider option to Codex's request field. */
+/** Copy this session's model with a request option; native child creation inherits that model. */
+export async function setFast(pi: ExtensionAPI, ctx: ExtensionContext, fast: boolean): Promise<void> {
+  const samplingParams = { ...ctx.model!.samplingParams };
+  if (fast) samplingParams.service_tier = "priority";
+  else delete samplingParams.service_tier;
+  const thinking = pi.getThinkingLevel(); // A request option keeps the user's current reasoning level.
+  if (!await pi.setModel({ ...ctx.model!, samplingParams })) throw new Error("Codex authentication is required");
+  pi.setThinkingLevel(thinking);
+}
+/** Restore the session option and adapt it to the provider request through existing extension hooks. */
 export function registerFast(pi: ExtensionAPI): void {
+  const restore = async (_event: unknown, ctx: ExtensionContext) => {
+    if (!isCodex(ctx)) return;
+    const entry = ctx.sessionManager.getBranch().findLast(e => e.type === "custom" && e.customType === FAST);
+    if (entry?.type === "custom") {
+      if (entry.data !== isFast(ctx)) await setFast(pi, ctx, entry.data as boolean);
+    } else pi.appendEntry(FAST, isFast(ctx)); // Save inherited model options before the first child request.
+  };
+  pi.on("session_start", restore);
+  pi.on("session_tree", restore);
+  pi.on("model_select", (_event, ctx) => { if (isCodex(ctx)) pi.appendEntry(FAST, isFast(ctx)); });
   pi.on("before_provider_request", (event, ctx) => { if (isCodex(ctx)) return priority(event.payload, isFast(ctx)); });
 }

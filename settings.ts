@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { PROVIDER_OPTIONS, isCodex } from "./fast.ts";
+import { setFast, isFast, isCodex } from "./fast.ts";
 
 export const SETTINGS = "pi-codex:settings"; // Store only review and context mode on the session branch.
 export type State = { review: boolean; compaction: "remote" | "experimental" };
@@ -23,15 +23,15 @@ export function restore(ctx: ExtensionContext): State {
   const defaults = config().defaults;
   return { review: value?.review ?? defaults.review, compaction: value?.compaction ?? defaults.compaction };
 }
-/** Show review and context strategy in the native extension status bar. */
+/** Show the current request option and plugin settings in the existing status bar. */
 export function status(ctx: ExtensionContext, state: State): void {
-  ctx.ui.setStatus("pi-codex", `Codex · Review ${state.review ? "on" : "off"} · Context ${state.compaction}`);
+  ctx.ui.setStatus("pi-codex", `Codex · Fast ${isFast(ctx) ? "on" : "off"} · Review ${state.review ? "on" : "off"} · Context ${state.compaction}`);
 }
 /** Bind GUI dialogs and slash commands to the same configuration operations. */
 export function registerSettings(pi: ExtensionAPI, get: () => State, set: (state: State, ctx: ExtensionContext) => void): void {
   pi.registerCommand("codex", {
     description: "Codex: fast on|off, review on|off, compaction remote|experimental",
-    handler: async (args, ctx) => { // Fast writes the GUI's native request option; review and compaction stay plugin settings.
+    handler: async (args, ctx) => { // Existing commands and dialogs work in both CLI and GUI.
       let [key, value] = args.trim().split(/\s+/);
       if (!key) {
         const choice = await ctx.ui.select("Codex 设置", ["Fast", "Review", "Compaction"]);
@@ -45,7 +45,8 @@ export function registerSettings(pi: ExtensionAPI, get: () => State, set: (state
       if (!values.includes(value)) throw new Error(`Choose ${values.join(" | ")}`);
       if (key === "fast") {
         if (!isCodex(ctx)) throw new Error("Select an OpenAI Codex model first");
-        pi.appendEntry(PROVIDER_OPTIONS, { serviceTier: value === "on" ? "priority" : null });
+        await setFast(pi, ctx, value === "on");
+        status(ctx, get());
       } else {
         set({ ...get(), [key]: key === "review" ? value === "on" : value }, ctx);
       }
