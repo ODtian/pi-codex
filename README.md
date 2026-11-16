@@ -1,10 +1,10 @@
-# pi-codex 0.2
+# pi-codex 0.2.1
 
 在 pi-agent 的插件页面添加本目录 `F:/pi-codex`，启用后新建会话或使用 GUI 的 Reload 操作。
 
-[GitHub Releases](https://github.com/ODtian/pi-codex/releases) 提供 npm 格式的 `odtian-pi-codex-0.2.0.tgz`。包名为 `@odtian/pi-codex`。
+[GitHub Releases](https://github.com/ODtian/pi-codex/releases) 提供 npm 格式的 `odtian-pi-codex-0.2.1.tgz`。包名为 `@odtian/pi-codex`。
 
-Fast 使用原生模型选择器中的 `模型名 · Fast`，ID 为 `原模型ID:fast`。子 agent 的原生 `model` 字段留空时继承父模型；指定普通模型或 Fast 模型时采用该选项。profile 通过原生扩展配置加载本包：
+Fast 使用请求参数 `service_tier: "priority"`。GUI 的 Fast 开关和 `/codex fast on|off` 修改当前会话的 `serviceTier`。模型 ID 使用真实值。原生 profile 的 `service_tier` 可选 `inherit`、`default`、`priority`，分别表示继承、普通、Fast。profile 通过原生扩展配置加载本包：
 
 ```yaml
 load_extensions: true
@@ -21,7 +21,7 @@ GUI 的 `/codex` 选择框和以下命令使用同一入口：
 /codex compaction experimental
 ```
 
-Fast 命令切换原生模型选中项。审查开关和上下文策略保存在当前会话，`config.json` 控制初始值。
+Fast、审查开关和上下文策略保存在当前会话，`config.json` 控制插件初始值。原生 profile 的请求参数继承由客户端处理。
 
 | 上下文策略 | 实现 | 恢复方式 |
 | --- | --- | --- |
@@ -30,7 +30,7 @@ Fast 命令切换原生模型选中项。审查开关和上下文策略保存在
 
 两种策略都接入 GUI 压缩按钮和自动压缩。实验性策略由 Pi 的本地分支提供历史与笔记存储，切窗产生零次摘要请求。后续推理使用选中的模型。
 
-自动审查使用 `codex-auto-review`、官方 policy 和完整 allow/deny 判定。`policy.md` 可编辑，每次审查读取。`review.model` 默认选用 `openai-codex/codex-auto-review:fast`；普通选项为 `openai-codex/codex-auto-review`。默认 `low` effort、Responses Lite 和输出契约按官方审查调用对齐。[模型选择](https://github.com/openai/codex/blob/f1ebc7b372bc837b7c6386113e867256d7cc7036/codex-rs/ext/guardian-reviewer/src/model.rs)、[输出契约](https://github.com/openai/codex/blob/f1ebc7b372bc837b7c6386113e867256d7cc7036/codex-rs/ext/guardian-reviewer/src/assessment.rs)
+自动审查使用 `openai-codex/codex-auto-review`、官方 policy 和完整 allow/deny 判定。`policy.md` 可编辑，每次审查读取；`review.serviceTier: "priority"` 为审查请求选择 Fast。默认 `low` effort、Responses Lite 和输出契约按官方审查调用对齐。[模型选择](https://github.com/openai/codex/blob/f1ebc7b372bc837b7c6386113e867256d7cc7036/codex-rs/ext/guardian-reviewer/src/model.rs)、[输出契约](https://github.com/openai/codex/blob/f1ebc7b372bc837b7c6386113e867256d7cc7036/codex-rs/ext/guardian-reviewer/src/assessment.rs)
 
 审查连接在进程内复用，并通过 `generate:false` 预热。同批动作并发预审，每个动作等待自己的完整结果。本机样本：旧版冷连接 3.61 秒、复用连接 2.43 秒；对齐后的 Fast 复用连接约 1.40 秒；预热后的双动作批次约 2.37 秒，第二个工具检查等待约 1 毫秒。主要耗时来自网络与服务端推理/输出。[预热协议](https://developers.openai.com/api/docs/guides/websocket-mode#connect-and-create-responses)
 

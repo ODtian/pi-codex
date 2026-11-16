@@ -2,7 +2,7 @@ import { SessionManager, createReadTool, createGrepTool, createFindTool, createL
   type ExtensionAPI, type ExtensionContext, type ToolCallEvent } from "@earendil-works/pi-coding-agent";
 import { cleanupSessionResources, validateToolCall, type Message, type ToolCall } from "@earendil-works/pi-ai";
 import { config, policy, type State } from "./settings.ts";
-import { FAST_SUFFIX, priority } from "./fast.ts";
+import { priority } from "./fast.ts";
 
 type Decision = { outcome: "allow" | "deny"; rationale?: string };
 type Evidence = { role: string; content: unknown };
@@ -97,7 +97,7 @@ function assess(event: ToolCallEvent, ctx: ExtensionContext, history: Evidence[]
 async function assess(event: ToolCallEvent | undefined, ctx: ExtensionContext, history: Evidence[], signal: AbortSignal, lane: number): Promise<Decision | void> {
   const options = config().review;
   const slash = options.model.indexOf("/");
-  const provider = options.model.slice(0, slash), selectedId = options.model.slice(slash + 1), id = selectedId.replace(/:fast$/, "");
+  const provider = options.model.slice(0, slash), id = options.model.slice(slash + 1);
   const base = ctx.modelRegistry.find(provider, id) ?? ctx.modelRegistry.getAll().find(m => m.provider === provider)!;
   const model = { ...base, id };
   const tools = [createReadTool(ctx.cwd), createGrepTool(ctx.cwd), createFindTool(ctx.cwd), createLsTool(ctx.cwd)];
@@ -130,7 +130,7 @@ async function assess(event: ToolCallEvent | undefined, ctx: ExtensionContext, h
             user_authorization: { type: "string", enum: ["unknown", "low", "medium", "high"] } },
           required: ["outcome"],
         } } };
-        return priority(body, selectedId.endsWith(FAST_SUFFIX));
+        return priority(body, options.serviceTier === "priority");
       },
     }).result();
     signal.throwIfAborted();

@@ -4,7 +4,8 @@
     "compaction": "remote"
   },
   "review": {
-    "model": "openai-codex/codex-auto-review:fast",
+    "model": "openai-codex/codex-auto-review",
+    "serviceTier": "priority",
     "reasoning": "low",
     "timeoutMs": 90000,
     "concurrency": 4,

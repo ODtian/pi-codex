@@ -1,7 +1,7 @@
 import { convertToLlm, type ExtensionAPI, type ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { cleanupSessionResources, getInitialSystemMessage } from "@earendil-works/pi-ai";
 import type { State } from "./settings.ts";
-import { isCodex, isFast, physicalModel, priority } from "./fast.ts";
+import { isCodex, isFast, priority } from "./fast.ts";
 
 type Item = Record<string, any>;
 type Checkpoint = { kind: "pi-codex"; version: 1; model: string; input: Item[] };
@@ -64,7 +64,7 @@ export function registerCompaction(pi: ExtensionAPI, get: () => State): void {
       const active = new Set(pi.getActiveTools());
       const context = { messages, ...(!getInitialSystemMessage(messages) ? { systemPrompt: ctx.getSystemPrompt(), tools: pi.getAllTools().filter(t => active.has(t.name)) } : {}) };
       let history: Item[] = [], compacted: Item | undefined; // Capture the SDK's wire input and Codex's completed compaction item.
-      const answer = await ctx.modelRegistry.streamSimple(physicalModel(ctx), context, {
+      const answer = await ctx.modelRegistry.streamSimple(ctx.model!, context, {
         signal: event.signal, transport: "auto", sessionId: `${ctx.sessionManager.getSessionId()}-compact`,
         headers: { "x-codex-beta-features": "remote_compaction_v2" },
         onPayload: payload => {
@@ -72,7 +72,7 @@ export function registerCompaction(pi: ExtensionAPI, get: () => State): void {
           history = [...(saved?.input ?? []), ...body.input];
           body.input = [...history, { type: "compaction_trigger" }];
           if (event.customInstructions) body.instructions += `\n\nCompaction guidance:\n${event.customInstructions}`;
-          return priority(body, isFast(ctx.model));
+          return priority(body, isFast(ctx));
         },
         onProviderStreamEvent: data => {
           const e = data as Item;
