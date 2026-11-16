@@ -1,0 +1,15 @@
+{
+  "defaults": {
+    "review": true,
+    "compaction": "remote"
+  },
+  "review": {
+    "model": "openai-codex/codex-auto-review:fast",
+    "reasoning": "low",
+    "timeoutMs": 90000,
+    "concurrency": 4,
+    "tools": ["*"],
+    "policyFile": "./policy.md",
+    "context": { "maxChars": 80000, "entryChars": 8000 }
+  }
+}

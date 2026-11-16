@@ -1,0 +1,10 @@
+pi-codex runtime: MIT.
+
+policy.md adapts OpenAI Codex automatic review policy material, Apache-2.0.
+Source: https://github.com/openai/codex/blob/f1ebc7b372bc837b7c6386113e867256d7cc7036/codex-rs/models-manager/models.json
+Only the execution environment and response/evidence framing are adapted for Pi.
+
+Remote compaction protocol reference:
+https://github.com/openai/codex/blob/f1ebc7b372bc837b7c6386113e867256d7cc7036/codex-rs/core/src/compact_remote_v2.rs
+
+GUI integration reference: abcwyc/pi-agent-desktop v0.8.5, Pi Web 0.15.0, Pi SDK 1.5.2.
